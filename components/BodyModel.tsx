@@ -41,20 +41,23 @@ const BodyPart = ({
 
   useFrame((state) => {
     if (mesh.current) {
+      // Cast material to MeshStandardMaterial to access specific properties
+      const material = mesh.current.material as THREE.MeshStandardMaterial;
+
       // Lerp logic could be added for smoother color transition, but direct set is snappier here
       if (isSelected) {
-        mesh.current.material.emissiveIntensity = 0.6 + Math.sin(state.clock.elapsedTime * 4) * 0.2;
-        mesh.current.material.color.setHex(highlightColor);
-        mesh.current.material.emissive.setHex(0x1d4ed8); // Deep blue glow
+        material.emissiveIntensity = 0.6 + Math.sin(state.clock.elapsedTime * 4) * 0.2;
+        material.color.setHex(highlightColor);
+        material.emissive.setHex(0x1d4ed8); // Deep blue glow
       } else if (hovered && isInteractive) {
-         mesh.current.material.emissiveIntensity = 0.3;
-         mesh.current.material.color.setHex(hoverColor);
-         mesh.current.material.emissive.setHex(0x000000);
+         material.emissiveIntensity = 0.3;
+         material.color.setHex(hoverColor);
+         material.emissive.setHex(0x000000);
       } else {
-        mesh.current.material.emissiveIntensity = 0;
-        mesh.current.material.emissive.setHex(0x000000);
+        material.emissiveIntensity = 0;
+        material.emissive.setHex(0x000000);
         // Set brighter base color
-        mesh.current.material.color.setHex(isInteractive ? baseColorInteractive : baseColorStatic);
+        material.color.setHex(isInteractive ? baseColorInteractive : baseColorStatic);
       }
     }
   });

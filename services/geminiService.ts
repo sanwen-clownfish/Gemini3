@@ -1,8 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { WorkoutExercise } from "../types";
 
-const apiKey = process.env.API_KEY;
-
 // Schema definition for structured output
 const exerciseSchema: Schema = {
   type: Type.ARRAY,
@@ -11,7 +9,15 @@ const exerciseSchema: Schema = {
     properties: {
       name: {
         type: Type.STRING,
-        description: "训练动作名称 (Name of the exercise)",
+        description: "训练动作名称 (Name of the exercise in Chinese)",
+      },
+      nameEn: {
+        type: Type.STRING,
+        description: "训练动作英文标准名称 (Standard English Name, e.g. 'Cable Crossover')",
+      },
+      equipment: {
+        type: Type.STRING,
+        description: "使用的器械类型，如'鹦鹉螺固定器械', '大剪刀/绳索', '哑铃', '杠铃' (Equipment type)",
       },
       description: {
         type: Type.STRING,
@@ -29,16 +35,24 @@ const exerciseSchema: Schema = {
       reps: {
         type: Type.STRING,
         description: "建议的组数和次数，例如 '4组 8-12次' (Recommended sets and reps in Chinese)",
+      },
+      gifUrl: {
+        type: Type.STRING,
+        description: "A direct URL to a standard exercise demonstration GIF from Wikimedia Commons or similar open source. Example: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Barbell_Bench_Press.gif'. If unknown, leave empty.",
       }
     },
-    required: ["name", "description", "rating", "difficulty", "reps"],
+    required: ["name", "nameEn", "description", "rating", "difficulty", "reps", "equipment"],
   },
 };
 
 export const fetchExercises = async (muscleName: string): Promise<WorkoutExercise[]> => {
+  // Access process.env.API_KEY inside the function to prevent top-level module crash
+  // if process is undefined during initial bundle evaluation.
+  const apiKey = process.env.API_KEY;
+
   if (!apiKey) {
     console.error("API Key is missing");
-    throw new Error("API Key is missing. Please configure process.env.API_KEY.");
+    throw new Error("API Key is missing. Please configure process.env.API_KEY in your environment.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -46,11 +60,19 @@ export const fetchExercises = async (muscleName: string): Promise<WorkoutExercis
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `针对"${muscleName}"，请提供5个最高效的增肌和力量训练动作。请给出动作名称、详细但简练的执行说明、1-10分的推荐指数评分、难度以及建议的组数次数。请务必使用简体中文回答。`,
+      contents: `针对"${muscleName}"，请提供5-6个最高效的增肌训练动作。
+      
+      **重要要求**:
+      1. 必须包含多种器械类型，不要局限于哑铃和杠铃。
+      2. 必须包含 **固定器械 (Nautilus/鹦鹉螺, Hammer Strength)**。
+      3. 必须包含 **绳索/滑轮 (Cable/大剪刀)** 动作。
+      4. **关键**: 尽最大努力提供该动作在 Wikimedia Commons 上的 .gif 链接。这对于用户体验至关重要。如果找不到确切的，找最接近的变体。
+      
+      请给出动作名称、英文名、器械类型、详细但简练的执行说明、1-10分的推荐指数评分、难度、建议的组数次数以及GIF链接。`,
       config: {
         responseMimeType: "application/json",
         responseSchema: exerciseSchema,
-        systemInstruction: "你是一位世界级的健身教练和运动解剖学专家。你的目标是为用户提供最符合生物力学的训练建议。所有输出必须是简体中文。",
+        systemInstruction: "你是一位世界级的健美教练。你精通各种训练流派，特别是器械训练（如鹦鹉螺 Nautilus）、绳索训练（如大剪刀/Cable Crossover）以及传统自由重量。你的目标是提供多样化、高强度的训练计划，并尽可能提供视觉参考链接。",
       },
     });
 
